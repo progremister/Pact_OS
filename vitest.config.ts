@@ -13,6 +13,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.tsx', 'tests/constant-time.test.ts', 'tests/elo-rating.test.ts'],
+    include: [
+      'tests/**/*.test.tsx',
+      'tests/constant-time.test.ts',
+      'tests/elo-rating.test.ts',
+      'tests/accountability-service.test.ts',
+    ],
   },
 });
