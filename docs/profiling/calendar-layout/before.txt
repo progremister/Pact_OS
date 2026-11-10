@@ -1,0 +1,42 @@
+$ node node_modules/jiti/lib/jiti-cli.mjs scratch/profile-calendar-layout.ts 20 5
+Scenario: 7 days x 40 events, 20 week renders per run, 5 runs (tz Europe/Bratislava)
+getLocalHourAndMinute calls per week render: 2240
+Runs (ms): 5155.3, 5179.3, 4900.1, 5943.0, 5562.2
+Median: 5179.3 ms per run  |  Mean: 5348.0 ms per run
+Median per week render: 258962.7 µs
+Heap used after run: 18.2 MB
+Checksum: 228400
+
+$ node --cpu-prof --cpu-prof-name=before.cpuprofile node_modules/jiti/lib/jiti-cli.mjs scratch/profile-calendar-layout.ts 10 3
+$ node scratch/summarize-cpuprofile.mjs before.cpuprofile
+Profile: before.cpuprofile  |  sampled time: 13198.1 ms  |  samples: 10256
+
+Top functions by SELF time
+ms        %       function
+6373.6    48.3%   getLocalHourAndMinute  src/lib/time.ts:484
+4940.6    37.4%   isValidIanaTimezone  src/lib/time.ts:38
+792.2     6.0%    (program)
+766.4     5.8%    flushCluster  src/features/calendar/layout.ts:310
+112.3     0.9%    (garbage collector)
+22.9      0.2%    (idle)
+15.5      0.1%    getPart  src/lib/time.ts:502
+13.1      0.1%    __webpack_require__  babel.cjs:242
+12.6      0.1%    computeTimelineRange  src/features/calendar/layout.ts:35
+8.8       0.1%    compileForInternalLoader  realm:392
+6.3       0.0%    layoutHorizontalEvents  src/features/calendar/layout.ts:94
+6.3       0.0%    (anonymous)  babel.cjs:242
+
+Top project functions by TOTAL (inclusive) time
+ms        %       function
+11330.9   85.9%   getLocalHourAndMinute  src/lib/time.ts:484
+6852.9    51.9%   computeTimelineRange  src/features/calendar/layout.ts:35
+4940.6    37.4%   isValidIanaTimezone  src/lib/time.ts:38
+4688.3    35.5%   layoutHorizontalEvents  src/features/calendar/layout.ts:94
+3371.3    25.5%   layoutVerticalEvents  src/features/calendar/layout.ts:248
+2597.5    19.7%   (anonymous)  src/features/calendar/layout.ts:259
+1905.7    14.4%   (anonymous)  src/features/calendar/layout.ts:111
+766.4     5.8%    flushCluster  src/features/calendar/layout.ts:310
+16.8      0.1%    getPart  src/lib/time.ts:502
+2.4       0.0%    (anonymous)  src/features/calendar/layout.ts:1
+1.3       0.0%    (anonymous)  src/features/calendar/layout.ts:289
+1.3       0.0%    (anonymous)  src/lib/time.ts:503

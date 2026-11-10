@@ -10,7 +10,8 @@ import {
   utcToDatetimeLocalInput,
   getDefaultLocalDeadline,
   formatSecondsToHumanReadable,
-  convertMinutesToMilliseconds
+  convertMinutesToMilliseconds,
+  getLocalHourAndMinute
 } from '../src/lib/time';
 
 function runTemporalEngineTestSuite() {
@@ -332,6 +333,30 @@ function runTemporalEngineTestSuite() {
   }
 
   console.log('Fractional-second and millisecond precision tests passed.\n');
+
+  // ----------------------------------------------------------------
+  // 12. CACHED TIMEZONE VALIDATION & FORMATTERS
+  // ----------------------------------------------------------------
+  console.log('12. Testing cached timezone validation and hour/minute formatters...');
+  // Repeated lookups must keep returning the same verdict once memoized.
+  for (let i = 0; i < 3; i++) {
+    assert.strictEqual(isValidIanaTimezone('Europe/Bratislava'), true);
+    assert.strictEqual(isValidIanaTimezone('Mars/Olympus_Mons'), false);
+    assert.strictEqual(isValidIanaTimezone('  Asia/Kolkata  '), true);
+  }
+
+  // Each timezone must get its own cached formatter, interleaved calls must not leak state.
+  const instant = '2026-07-15T12:30:00.000Z';
+  for (let i = 0; i < 3; i++) {
+    assert.deepStrictEqual(getLocalHourAndMinute(instant, 'Asia/Kolkata'), { hour: 18, minute: 0 });
+    assert.deepStrictEqual(getLocalHourAndMinute(instant, 'America/New_York'), { hour: 8, minute: 30 });
+    assert.deepStrictEqual(getLocalHourAndMinute(instant, 'UTC'), { hour: 12, minute: 30 });
+    // Invalid timezones still fall back to UTC.
+    assert.deepStrictEqual(getLocalHourAndMinute(instant, 'Mars/Olympus_Mons'), { hour: 12, minute: 30 });
+  }
+  assert.deepStrictEqual(getLocalHourAndMinute('not-a-date', 'UTC'), { hour: 0, minute: 0 });
+
+  console.log('Cached timezone validation and formatter tests passed.\n');
   console.log('================================================================');
   console.log('🎉 ALL TEMPORAL ENGINE & TIMEZONE UNIT TESTS PASSED CLEANLY');
   console.log('================================================================\n');

@@ -31,6 +31,11 @@ export class TestClock implements Clock {
 
 export const defaultClock: Clock = new SystemClock();
 
+/** Upper bound for the per-timezone caches below (there are ~600 IANA identifiers). */
+const MAX_TIMEZONE_CACHE_ENTRIES = 1000;
+const timezoneValidityCache = new Map<string, boolean>();
+const hourMinuteFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
 /**
  * Validates whether a string is a valid IANA timezone identifier.
  * Uses native Intl.DateTimeFormat to prevent invalid abbreviations like 'IST' or 'PST'.
@@ -45,12 +50,24 @@ export function isValidIanaTimezone(timeZone: string): boolean {
   ) {
     return false;
   }
+
+  // Constructing an Intl.DateTimeFormat is expensive (tens of µs), and this check runs on
+  // every temporal helper call, so the verdict for each identifier is memoized.
+  const cached = timezoneValidityCache.get(trimmed);
+  if (cached !== undefined) return cached;
+
+  let isValid: boolean;
   try {
     Intl.DateTimeFormat(undefined, { timeZone: trimmed });
-    return true;
+    isValid = true;
   } catch {
-    return false;
+    isValid = false;
   }
+
+  // Bound the cache so arbitrary user input cannot grow it without limit.
+  if (timezoneValidityCache.size >= MAX_TIMEZONE_CACHE_ENTRIES) timezoneValidityCache.clear();
+  timezoneValidityCache.set(trimmed, isValid);
+  return isValid;
 }
 
 export interface LocalToUtcResult {
@@ -491,12 +508,18 @@ export function getLocalHourAndMinute(
     return { hour: 0, minute: 0 };
   }
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: safeTz,
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  });
+  // Intl.DateTimeFormat instances are immutable, so one per timezone is reused across calls.
+  let formatter = hourMinuteFormatterCache.get(safeTz);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: safeTz,
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    });
+    if (hourMinuteFormatterCache.size >= MAX_TIMEZONE_CACHE_ENTRIES) hourMinuteFormatterCache.clear();
+    hourMinuteFormatterCache.set(safeTz, formatter);
+  }
 
   const parts = formatter.formatToParts(date);
   const getPart = (t: string) => {
